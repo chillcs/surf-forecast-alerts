@@ -150,11 +150,11 @@ function runProgram() {
       // SENDGRID EMAIL ALERT RECIPIENT AND MESSAGE ---
       if (checkSurfConditions()) {
         // CONDITIONS ARE IDEAL ---
-        console.log("Conditions are looking awesome!");
+        console.log("Forecast is looking awesome!");
         const msg = {
           to: "curtis90h@gmail.com",
           from: "curtis@cstudio.ca",
-          subject: "Conditions are looking good!",
+          subject: "Surf forecast alert!",
           html: `
         <p>Hi Curtis!</p>
         <p>You might want to book some time off..</p>
@@ -173,11 +173,11 @@ function runProgram() {
           });
       } else {
         // CONDITIONS ARE NOT IDEAL ---
-        console.log("Conditions are not looking great..");
+        console.log("Forecast is not looking great..");
         const msg = {
           to: "curtis90h@gmail.com",
           from: "curtis@cstudio.ca",
-          subject: "Conditions are not looking great..",
+          subject: "Surf forecast is not looking great..",
           html: `
         <p>Hi Curtis,</p>
         <p>You might want to stay in..</p>

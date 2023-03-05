@@ -153,7 +153,10 @@ function runProgram() {
         console.log("Forecast is looking awesome!");
         const msg = {
           to: "curtis90h@gmail.com",
-          from: "curtis@cstudio.ca",
+          from: {
+            email: "curtis@cstudio.ca",
+            name: "cStudio Bot",
+          },
           subject: "Surf forecast alert!",
           html: `
         <p>Hi Curtis!</p>
@@ -175,8 +178,10 @@ function runProgram() {
         // CONDITIONS ARE NOT IDEAL ---
         console.log("Forecast is not looking great..");
         const msg = {
-          to: "curtis90h@gmail.com",
-          from: "curtis@cstudio.ca",
+          from: {
+            email: "curtis@cstudio.ca",
+            name: "cStudio Bot",
+          },
           subject: "Surf forecast is not looking great..",
           html: `
         <p>Hi Curtis,</p>

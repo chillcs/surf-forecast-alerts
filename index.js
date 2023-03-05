@@ -1,113 +1,226 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
-require('dotenv').config();
-const sgMail = require('@sendgrid/mail');
+require("dotenv").config();
+const axios = require("axios");
+const cheerio = require("cheerio");
+const sgMail = require("@sendgrid/mail");
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-const cron = require('node-cron');
 
+// DAYS OUT COLUMN TO SCRAPE FROM ---
+const daysOut = 7;
+
+// TIME OF DAY THE PROGRAM RUNS AT (IN 24HR TIME) ---
+const startTime = "1015";
+
+// IDEAL SURF CONDITIONS ---
 let swellHeightMin = 1;
 let swellHeightMax = 2.5;
-let swellDirections = ['S', 'SSW', 'SW'];
 let swellPeriodMin = 12;
-let swellPeriodMax = 20;
-let windSpeedMin = 0;
-let windSpeedMax = 25;
-let windDirections = ['N', 'NNE', 'NE', 'E', 'ESE', 'SE'];
+let swellPeriodMax = 21;
+let swellDirections = ["S", "SSW", "SW"];
+let windSpeedMaxOnShore = 5;
+let windSpeedMaxOffShore = 20;
+let windDirections = ["N", "NNE", "NE", "E", "ESE", "SE"];
 
-cron.schedule('0 9-12 * * *', () => {
-  console.log('Running every day at 9am, 10am, 11am and 12pm');
-  axios.get('https://www.surf-forecast.com/breaks/Long-Beach_6/forecasts/latest/six_day', {
-  headers: {
-    Authorization: `Bearer ${process.env.SENDGRID_API_KEY}`
-  },
-})
-  .then((response) => {
-    const $ = cheerio.load(response.data);
-    let swellHeight = parseFloat($('#forecast-table > div > table > tbody > tr:nth-child(5) > td:nth-child(24) > div > svg > text').text());
-    let swellDirection = $('#forecast-table > div > table > tbody > tr:nth-child(5) > td:nth-child(24) > div > div').text();
-    let swellPeriod = parseFloat($('#forecast-table > div > table > tbody > tr:nth-child(6) > td:nth-child(24) > strong').text());
-    let windSpeed = parseFloat($('#forecast-table > div > table > tbody > tr:nth-child(9) > td:nth-child(24) > div > svg > text').text());
-    let windDirection = $('#forecast-table > div > table > tbody > tr:nth-child(9) > td:nth-child(24) > div > div').text();
-    let weatherConditions = $('#forecast-table > div > table > tfoot > tr:nth-child(4) > td:nth-child(24)').text();
-    let weatherTemp = $('#forecast-table > div > table > tfoot > tr:nth-child(6) > td:nth-child(24) > span').text();
-    
-    if (
-      swellHeight >= swellHeightMin && swellHeight <= swellHeightMax &&
-      swellDirections.includes(swellDirection) &&
-      swellPeriod >= swellPeriodMin && swellPeriod <= swellPeriodMax &&
-      windSpeed >= windSpeedMin && windSpeed <= windSpeedMax &&
-      (windSpeed >= 5 || windDirections.includes(windDirection))
-    ) {
-      console.log("Conditions are perfect!");
-      console.log(`Swell Height: ${swellHeight}m\nSwell Direction: ${swellDirection}\nSwell Period: ${swellPeriod}s\nWind Speed: ${windSpeed}km\nWind Direction: ${windDirection}\nWeather: ${weatherConditions.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}\nTemperature: ${weatherTemp}°C`)
-      const msg = {
-        to: 'curtis90h@gmail.com',
-        from: 'curtis@cstudio.ca',
-        subject: 'Conditions are perfect!',
-        text: 'Surf conditions are looking good next week!',
-        html: `
-          <p>Hi Curtis!</p>
-          <p>You might want to book some time off next week..</p>
-          <p>Here is the forecast for Long Beach:</p>
-          <ul>
-            <li>Swell Height: ${swellHeight}m</li>
-            <li>Swell Direction: ${swellDirection}</li>
-            <li>Swell Period: ${swellPeriod}s</li>
-            <li>Wind Speed: ${windSpeed}km</li>
-            <li>Wind Direction: ${windDirection}</li>
-            <li>Weather: ${weatherConditions.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}</li>
-            <li>Temperature: ${weatherTemp}°C</li>
-          </ul>
-          <p>Best,</p>
-          <p>cStudio Bot</p>
-        `,
+let swellPeriodMinLongPeriod = 17;
+let swellHeightMinLongPeriod = 0.5;
+let swellHeightMaxLongPeriod = 2.0;
+
+// MAIN SCRAPER FUNCTION ---
+function runProgram() {
+  console.log(
+    `Program ran at ${startTime.slice(0, 2).padStart(2, "0")}:${startTime
+      .slice(2)
+      .padStart(2, "0")}`
+  );
+  axios
+    .get(
+      "https://www.surf-forecast.com/breaks/Long-Beach_6/forecasts/latest/six_day",
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.SENDGRID_API_KEY}`,
+        },
       }
-      sgMail
-        .send(msg)
-        .then(() => {
-          console.log('Notification sent to Curtis!')
-        })
-        .catch((error) => {
-          console.error(error)
-        })
-    } else {
-      console.log("Conditions are not great...");
-      console.log(`Swell Height: ${swellHeight}m\nSwell Direction: ${swellDirection}\nSwell Period: ${swellPeriod}s\nWind Speed: ${windSpeed}km\nWind Direction: ${windDirection}\nWeather: ${weatherConditions.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}\nTemperature: ${weatherTemp}°C`)
-      const msg = {
-        to: 'curtis90h@gmail.com',
-        from: 'curtis@cstudio.ca',
-        subject: 'Conditions are not great..',
-        text: 'Surf conditions are not looking good next week..',
-        html: `
-          <p>Hi Curtis,</p>
-          <p>You might want to stay in and work next week..</p>
-          <p>Here is the forecast for Long Beach:</p>
-          <ul>
-            <li>Swell Height: ${swellHeight}m</li>
-            <li>Swell Direction: ${swellDirection}</li>
-            <li>Swell Period: ${swellPeriod}s</li>
-            <li>Wind Speed: ${windSpeed}km</li>
-            <li>Wind Direction: ${windDirection}</li>
-            <li>Weather: ${weatherConditions.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}</li>
-            <li>Temperature: ${weatherTemp}°C</li>
-          </ul>
-          <p>Best,</p>
-          <p>cStudio Bot</p>
-        `,
+    )
+    .then((response) => {
+      const $ = cheerio.load(response.data);
+
+      // EXTRACTS AND STORES THE DATA ---
+      function extractFloatValue(selector) {
+        return parseFloat($(selector).text());
       }
-      sgMail
-        .send(msg)
-        .then(() => {
-          console.log('Notification sent to Curtis!')
-        })
-        .catch((error) => {
-          console.error(error)
-        })
-    }
+      function extractStringValue(selector) {
+        return $(selector).text();
+      }
+      const columnNumber = daysOut * 3 + 3;
+      let swellHeight = extractFloatValue(
+        `#forecast-table > div > table > tbody > tr:nth-child(5) > td:nth-child(${columnNumber}) > div > svg > text`
+      );
+      let swellDirection = extractStringValue(
+        `#forecast-table > div > table > tbody > tr:nth-child(5) > td:nth-child(${columnNumber}) > div > div`
+      );
+      let swellPeriod = extractFloatValue(
+        `#forecast-table > div > table > tbody > tr:nth-child(6) > td:nth-child(${columnNumber}) > strong`
+      );
+      let windSpeed = extractFloatValue(
+        `#forecast-table > div > table > tbody > tr:nth-child(9) > td:nth-child(${columnNumber}) > div > svg > text`
+      );
+      let windDirection = extractStringValue(
+        `#forecast-table > div > table > tbody > tr:nth-child(9) > td:nth-child(${columnNumber}) > div > div`
+      );
+      let weatherForecast = extractStringValue(
+        `#forecast-table > div > table > tfoot > tr:nth-child(4) > td:nth-child(${columnNumber})`
+      );
+      let weatherTemp = extractStringValue(
+        `#forecast-table > div > table > tfoot > tr:nth-child(6) > td:nth-child(${columnNumber}) > span`
+      );
 
-  })
-  .catch((error) => {
-    console.log(error);
-  });
+      // BUILDS THE HTML SURF REPORT ---
+      const today = new Date();
+      const reportDate = new Date(
+        today.getTime() + daysOut * 24 * 60 * 60 * 1000
+      );
+      const formattedReportDate = reportDate.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+      function getSurfConditionHTML(
+        swellHeight,
+        swellDirection,
+        swellPeriod,
+        windSpeed,
+        windDirection,
+        weatherForecast,
+        weatherTemp
+      ) {
+        return `
+    <p>Surf report for ${formattedReportDate}:</p>
+    <ul>
+      <li>Swell Height: ${swellHeight}m</li>
+      <li>Swell Direction: ${swellDirection}</li>
+      <li>Swell Period: ${swellPeriod}s</li>
+      <li>Wind Speed: ${windSpeed}km</li>
+      <li>Wind Direction: ${windDirection}</li>
+      <li>Forecast: ${weatherForecast
+        .split(" ")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ")}</li>
+      <li>Temperature: ${weatherTemp}°C</li>
+    </ul>
+  `;
+      }
+      const surfConditionHTML = getSurfConditionHTML(
+        swellHeight,
+        swellDirection,
+        swellPeriod,
+        windSpeed,
+        windDirection,
+        weatherForecast,
+        weatherTemp
+      );
+      console.log(
+        `Surf Report:\nSwell Height: ${swellHeight}m\nSwell Direction: ${swellDirection}\nSwell Period: ${swellPeriod}s\nWind Speed: ${windSpeed}km\nWind Direction: ${windDirection}\nWeather: ${weatherForecast
+          .split(" ")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ")}\nTemperature: ${weatherTemp}°C`
+      );
 
-});
+      // CHECKS IF SURF CONDITIONS ARE IDEAL ---
+      function checkSurfConditions() {
+        if (swellPeriod >= swellPeriodMinLongPeriod) {
+          swellHeightMin = swellHeightMinLongPeriod;
+          swellHeightMax = swellHeightMaxLongPeriod;
+        }
+        if (
+          swellHeight >= swellHeightMin &&
+          swellHeight <= swellHeightMax &&
+          swellDirections.includes(swellDirection) &&
+          swellPeriod >= swellPeriodMin &&
+          swellPeriod <= swellPeriodMax &&
+          windSpeed <=
+            (windDirections.includes(windDirection)
+              ? windSpeedMaxOffShore
+              : windSpeedMaxOnShore)
+        ) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+
+      // SENDGRID EMAIL ALERT RECIPIENT AND MESSAGE ---
+      if (checkSurfConditions()) {
+        // CONDITIONS ARE IDEAL ---
+        console.log("Conditions are looking awesome!");
+        const msg = {
+          to: "curtis90h@gmail.com",
+          from: "curtis@cstudio.ca",
+          subject: "Conditions are looking good!",
+          html: `
+        <p>Hi Curtis!</p>
+        <p>You might want to book some time off..</p>
+        ${surfConditionHTML}
+        <p>Best,</p>
+        <p>cStudio Bot</p>
+      `,
+        };
+        sgMail
+          .send(msg)
+          .then(() => {
+            console.log("Notification sent to Curtis");
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+      } else {
+        // CONDITIONS ARE NOT IDEAL ---
+        console.log("Conditions are not looking great..");
+        const msg = {
+          to: "curtis90h@gmail.com",
+          from: "curtis@cstudio.ca",
+          subject: "Conditions are not looking great..",
+          html: `
+        <p>Hi Curtis,</p>
+        <p>You might want to stay in..</p>
+        ${surfConditionHTML}
+        <p>Best,</p>
+        <p>cStudio Bot</p>
+      `,
+        };
+        sgMail
+          .send(msg)
+          .then(() => {
+            console.log("Notification sent to Curtis");
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+}
+
+// SCHEDULES PROGRAM TO RUN EVERY 24 HRS ---
+const hour = parseInt(startTime.slice(0, 2), 10);
+const minute = parseInt(startTime.slice(2), 10);
+function scheduleProgram() {
+  const now = new Date();
+  const scheduledTime = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    hour,
+    minute,
+    0
+  );
+  let delay = scheduledTime.getTime() - now.getTime();
+  if (delay < 0) {
+    delay += 86400000;
+  }
+  setTimeout(() => {
+    runProgram();
+    setInterval(runProgram, 86400000);
+  }, delay);
+}
+scheduleProgram();

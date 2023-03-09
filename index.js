@@ -7,8 +7,8 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 // DAYS OUT COLUMN TO SCRAPE FROM ---
 const daysOut = 7;
 
-// TIME OF DAY THE PROGRAM RUNS AT (IN 24HR TIME) ---
-const startTime = "1015";
+// // TIME OF DAY THE PROGRAM RUNS AT (IN 24HR TIME) ---
+// const startTime = "1015";
 
 // IDEAL SURF CONDITIONS ---
 let swellHeightMin = 1;
@@ -24,13 +24,14 @@ let swellPeriodMinLongPeriod = 17;
 let swellHeightMinLongPeriod = 0.5;
 let swellHeightMaxLongPeriod = 2.0;
 
-// MAIN SCRAPER FUNCTION ---
+// SCRAPER FUNCTION ---
 function runProgram() {
-  console.log(
-    `Program ran at ${startTime.slice(0, 2).padStart(2, "0")}:${startTime
-      .slice(2)
-      .padStart(2, "0")}`
-  );
+  // console.log(
+  //   `Program ran at ${startTime.slice(0, 2).padStart(2, "0")}:${startTime
+  //     .slice(2)
+  //     .padStart(2, "0")}`
+  // );
+  console.log("Running program...");
   axios
     .get(
       "https://www.surf-forecast.com/breaks/Long-Beach_6/forecasts/latest/six_day",
@@ -178,6 +179,7 @@ function runProgram() {
         // CONDITIONS ARE NOT IDEAL ---
         console.log("Forecast is not looking great..");
         const msg = {
+          to: "curtis90h@gmail.com",
           from: {
             email: "curtis@cstudio.ca",
             name: "cStudio Bot",
@@ -206,26 +208,28 @@ function runProgram() {
     });
 }
 
-// SCHEDULES PROGRAM TO RUN EVERY 24 HRS ---
-const hour = parseInt(startTime.slice(0, 2), 10);
-const minute = parseInt(startTime.slice(2), 10);
-function scheduleProgram() {
-  const now = new Date();
-  const scheduledTime = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-    hour,
-    minute,
-    0
-  );
-  let delay = scheduledTime.getTime() - now.getTime();
-  if (delay < 0) {
-    delay += 86400000;
-  }
-  setTimeout(() => {
-    runProgram();
-    setInterval(runProgram, 86400000);
-  }, delay);
-}
-scheduleProgram();
+runProgram();
+
+// // SCHEDULES PROGRAM TO RUN EVERY 24 HRS ---
+// const hour = parseInt(startTime.slice(0, 2), 10);
+// const minute = parseInt(startTime.slice(2), 10);
+// function scheduleProgram() {
+//   const now = new Date();
+//   const scheduledTime = new Date(
+//     now.getFullYear(),
+//     now.getMonth(),
+//     now.getDate(),
+//     hour,
+//     minute,
+//     0
+//   );
+//   let delay = scheduledTime.getTime() - now.getTime();
+//   if (delay < 0) {
+//     delay += 86400000;
+//   }
+//   setTimeout(() => {
+//     runProgram();
+//     setInterval(runProgram, 86400000);
+//   }, delay);
+// }
+// scheduleProgram();
